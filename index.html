@@ -1,27 +1,33 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Gabriel Altino Fotografia</title>
 <style>
-body{margin:0;background:#0b0b0d;color:#fff;font-family:Arial,sans-serif}
-main{max-width:900px;margin:auto;padding:50px 22px}
-h1{font-size:48px;margin-bottom:8px}.tag{color:#aaa}
-.card{margin-top:35px;padding:24px;background:#17171b;border:1px solid #29292e;border-radius:14px}
-.btn{display:inline-block;margin-top:18px;padding:14px 20px;background:#fff;color:#111;border-radius:8px;text-decoration:none;font-weight:bold}
+*{box-sizing:border-box}body{margin:0;background:#09090b;color:#fff;font-family:Arial,sans-serif}
+header{padding:70px 7%;background:linear-gradient(90deg,#050505cc,#05050555),url('https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=1800&q=85') center/cover}
+h1{font-size:clamp(40px,8vw,78px);margin:10px 0}.tag{letter-spacing:3px;color:#bbb}.hero p{max-width:600px;color:#ddd;font-size:18px;line-height:1.5}
+section{padding:55px 7%}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}.card{background:#151518;border:1px solid #29292e;border-radius:14px;overflow:hidden}.cover{height:210px;background-size:cover;background-position:center}.pad{padding:20px}
+button{border:0;background:#fff;color:#111;padding:13px 18px;border-radius:8px;font-weight:700;cursor:pointer}.price{font-size:24px;font-weight:800;margin:14px 0}.small{color:#aaa}
+.modal{display:none;position:fixed;inset:0;background:#000d;z-index:5;padding:20px;overflow:auto}.box{max-width:700px;margin:30px auto;background:#151518;padding:25px;border-radius:15px}.photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.photo{height:110px;background-size:cover;background-position:center;border:2px solid transparent;border-radius:8px}.selected{border-color:white}.field{width:100%;margin:6px 0 12px;padding:12px;background:#0b0b0d;color:#fff;border:1px solid #333;border-radius:8px}.qr{max-width:240px;background:#fff;padding:10px}
 </style>
 </head>
-<body><main>
-<div class="tag">FOTOGRAFIA ESPORTIVA</div>
-<h1>Gabriel Altino Fotografia</h1>
-<p>Registre seus melhores momentos dentro de campo.</p>
-<div class="card">
-<h2>Seu álbum</h2>
-<p>Em breve: seleção de fotos, pacotes, Pix e entrega automática por e-mail.</p>
-<a class="btn" href="#albuns">Ver álbuns</a>
-</div>
-<section id="albuns" class="card">
-<h2>Álbuns</h2><p>Os eventos serão cadastrados aqui.</p>
-</section>
-</main></body></html>
+<body>
+<header><div class="tag">FOTOGRAFIA ESPORTIVA</div><h1>Gabriel Altino Fotografia</h1><div class="hero"><p>Escolha suas fotos do jogo, pague por Pix e receba a entrega automaticamente no seu e-mail.</p></div></header>
+<section><h2>Álbuns</h2><div id="albums" class="grid"></div></section>
+
+<div id="modal" class="modal"><div class="box"><button onclick="closeModal()">Fechar</button><h2 id="title"></h2><div id="photos" class="photos"></div>
+<label>Nome</label><input id="name" class="field" placeholder="Seu nome">
+<label>E-mail</label><input id="email" class="field" type="email" placeholder="Seu e-mail">
+<button onclick="pay()">Gerar Pix</button><div id="payment"></div></div></div>
+
+<script>
+let albums=[], current=null, selected=[];
+async function load(){albums=await (await fetch('/api/albums')).json();document.getElementById('albums').innerHTML=albums.map((a,i)=>`<article class="card"><div class="cover" style="background-image:url('${a.photos[0]}')"></div><div class="pad"><h3>${a.name}</h3><div class="price">A partir de R$ ${a.price.toFixed(2).replace('.',',')}</div><button onclick="openAlbum(${i})">Escolher fotos</button></div></article>`).join('')}
+function openAlbum(i){current=albums[i];selected=[];document.getElementById('title').textContent=current.name;document.getElementById('photos').innerHTML=current.photos.map((p,n)=>`<div class="photo" style="background-image:url('${p}')" onclick="toggle(this,${n})"></div>`).join('');document.getElementById('payment').innerHTML='';document.getElementById('modal').style.display='block'}
+function toggle(el,n){el.classList.toggle('selected');selected.includes(n)?selected=selected.filter(x=>x!==n):selected.push(n)}
+function closeModal(){document.getElementById('modal').style.display='none'}
+async function pay(){const name=document.getElementById('name').value.trim(),email=document.getElementById('email').value.trim();if(!name||!email||!selected.length)return alert('Preencha nome, e-mail e selecione pelo menos uma foto.');const amount=current.price;const r=await fetch('/api/create-payment',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,email,albumId:current.id,selectedPhotos:selected,amount})});const d=await r.json();if(!r.ok)return alert(d.error||'Erro ao gerar Pix');document.getElementById('payment').innerHTML=`<h3>Pix gerado!</h3><p>Escaneie o QR Code ou copie e cole:</p><img class="qr" src="data:image/png;base64,${d.qrCode}"><p style="word-break:break-all">${d.payload}</p><p class="small">Depois do pagamento, o sistema confirmará e enviará a entrega para o e-mail informado.</p>`}
+load();
+</script>
+</body></html>
